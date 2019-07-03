@@ -2,3 +2,6 @@
 **/*.rs.bk
 boop.txt
 inp.txt
+*.swp
+*.swq
+

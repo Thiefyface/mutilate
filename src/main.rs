@@ -6,7 +6,7 @@ use std::{env};
 use std::process::{Command, Stdio};
 
 mod mutators;
-use mutators::chaos_mutator::Mutilate;
+use mutators::Mutilate;
 
 fn main() {
     println!("{}[^_^] Mutilation [^_^]\n----------------------{}",RED,CLEAR); 
@@ -55,38 +55,10 @@ fn main() {
 
     let inp =fs::read_to_string(inp_file).expect("unable to read input");
 
-    let mut tmp_vec: Vec<u8> = vec![0;inp.len()];
+    let mut mutilator_list = gen_mutilator_list(&inp,mutator_choice,seed); 
+
+
     let stdout = io::stdout;
-    let strlen = inp.len();
-
-    let mut mutilator_list: Vec<Box<dyn mutators::chaos_mutator::Mutilate>> = Vec::new();
-
-    if mutator_choice == "chaos" || mutator_choice == "all"{
-        let inp_copy_chaos = String::from(&inp[0..strlen]); // ideally, inp/out should be shared.
-        let mut out_chaos: Vec<u8> = Vec::with_capacity(inp.len());
-        let mut chaos_flipper = mutators::chaos_mutator::ChaosFlipper{input:inp_copy_chaos,
-                                                                      seed:seed,
-                                                                      output:out_chaos,
-                                                                      tmp_vec:tmp_vec,
-                                                                      enabled:true};
-        chaos_flipper.init_output();
-        mutilator_list.push(Box::new(chaos_flipper));
-    }
-
-    if mutator_choice == "truncator" || mutator_choice == "all"{
-        let inp_copy_trunc = String::from(&inp[0..strlen]);
-        let mut out_trunc: Vec<u8> = Vec::with_capacity(inp.len());
-
-        let mut truncator = mutators::chaos_mutator::Truncator{input:inp_copy_trunc,
-                                                              seed:seed,
-                                                              output:out_trunc,
-                                                              enabled:true};
-        truncator.init_output();
-        mutilator_list.push(Box::new(truncator));
-    }
-
-
-
     if target_process.len() > 0{
         println!("{}Process to spawn => {}{}",CYAN,target_process,CLEAR);
         let mut cmd=Command::new(&target_process);
@@ -180,6 +152,57 @@ fn main() {
     }
 }
 
+pub fn gen_mutilator_list(inp :&String,
+                          mutator_choice: String, 
+                          seed: usize )-> Vec<Box<dyn mutators::Mutilate>>{ 
+    let strlen = inp.len();
+    let mut mutilator_list: Vec<Box<dyn mutators::Mutilate>> = Vec::new();
+
+    if mutator_choice.find("chaos") != None || mutator_choice == "all"{
+        let inp_copy_chaos = String::from(&inp[0..strlen]); // ideally, inp/out should be shared.
+        let mut out_chaos: Vec<u8> = Vec::with_capacity(inp.len());
+        let mut tmp_vec: Vec<u8> = vec![0;inp.len()];
+        let mut chaos_flipper = mutators::ChaosFlipper{input:inp_copy_chaos,
+                                                                 seed:seed,
+                                                                 output:out_chaos,
+                                                                 tmp_vec:tmp_vec,
+                                                                 enabled:true};
+        chaos_flipper.init_output();
+        mutilator_list.push(Box::new(chaos_flipper));
+    }
+
+    if mutator_choice.find("truncator")  != None || mutator_choice == "all"{
+        let inp_copy_trunc = String::from(&inp[0..strlen]);
+        let mut out_trunc: Vec<u8> = Vec::with_capacity(inp.len());
+
+        let mut truncator = mutators::Truncator{input:inp_copy_trunc,
+                                                seed:seed,
+                                                output:out_trunc,
+                                                enabled:true};
+        truncator.init_output();
+        mutilator_list.push(Box::new(truncator));
+    }
+
+
+    if mutator_choice.find("lencorrupt")  != None || mutator_choice == "all"{
+        let inp_copy_lencor = String::from(&inp[0..strlen]);
+        let mut out_lencor: Vec<u8> = Vec::with_capacity(inp.len());
+
+        let mut len_corruption = mutators::LenCorruption{input:inp_copy_lencor,
+                                                         seed:seed,
+                                                         output:out_lencor,
+                                                         enabled:true};
+        len_corruption.init_output();
+        mutilator_list.push(Box::new(len_corruption));
+    }
+
+
+    return mutilator_list;
+}
+
+
+
+/////////////////////////////////////////////////////////////////////
 pub fn WARN(inp:&str) { println!("{}[!.!] {}{}",YELLOW,inp,CLEAR); }
 pub fn ERR(inp:&str)  { println!("{}[x.x] {}{}",RED,inp,CLEAR); }
 pub fn GOOD(inp:&str) {println!("{}[^_^] {}{}",GREEN,inp,CLEAR); }
@@ -195,7 +218,4 @@ static PURPLE:&'static str="\x1b[95m";
 static CYAN:&'static str="\x1b[96m";
 static CLEAR:&'static str="\x1b[00m";
 
-fn unbox<T>(value: Box<T>) -> T {
-    *value
-}
 

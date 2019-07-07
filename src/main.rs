@@ -2,7 +2,7 @@ use std::path::Path;
 use std::error::Error;
 use std::fs::{self,File}; 
 use std::io::{self,Write,Read};
-use std::{env};
+use std::{env,cmp};
 use std::process::{Command, Stdio};
 
 mod mutators;
@@ -19,6 +19,7 @@ fn main() {
         println!("--count <usize> => How many cases to output"); 
         println!("--maxlen <usize> => Max output size");
         println!("--mutator [mutator_name] => use specific mutation function (default => all)");
+        println!("[mutator_name] => ['chaos','lencorrupt',truncator']");
         println!("{}",CLEAR);
         return;
     }
@@ -68,11 +69,13 @@ fn main() {
 
        if out_file == "@@"{
  
-            for i in 0..count{
-                for m in &mut mutilator_list[..]{
+            for m in &mut mutilator_list[..]{
+                println!("m=>max_count == 0x{:x}",m.max_count());
+                for i in 0..cmp::min(count,m.max_count()){
                     
+                    // put a max count, break on that
+                    // such that we don't need to check inside mutate.  
                     let new_str:&Vec<u8> = &m.mutate().unwrap();
-                    if m.is_enabled() == false { break; }
 
 
                     let run_cmd = match cmd.stdin(Stdio::piped())
@@ -99,7 +102,6 @@ fn main() {
                         Ok(_) => println!("cmd out => {}",s),
                     }
                 }
-
             }
         } else {
 
@@ -109,10 +111,10 @@ fn main() {
                 Ok(file) => file,
             };
 
-            for i in 0..count{
-                for m in &mut mutilator_list[..]{
+            for m in &mut mutilator_list[..]{
+                println!("m=>max_count == 0x{:x}",m.max_count());
+                for i in 0..cmp::min(count,m.max_count()){
                     let new_str:&Vec<u8> = &m.mutate().unwrap();
-                    if m.is_enabled() == false { break; }
                     file.write_all(new_str); 
                 }
                 let asdf=cmd.output().expect("failed [;_;]");
@@ -123,9 +125,9 @@ fn main() {
     } else { 
         if out_file == "@@"{
             for m in &mut mutilator_list[..]{
-                for i in 0..count{
+                println!("m=>max_count == 0x{:x}",m.max_count());
+                for i in 0..cmp::min(count,m.max_count()){
                     let new_str:&Vec<u8> = &m.mutate().unwrap();
-                    if m.is_enabled() == false { break; }
                     io::stdout().write_all(new_str);    
                 }
             }
@@ -138,9 +140,9 @@ fn main() {
             };
             
             for m in &mut mutilator_list[..]{
-                for i in 0..count{
+                println!("m=>max_count == 0x{:x}",m.max_count());
+                for i in 0..cmp::min(count,m.max_count()){
                     let new_str:&Vec<u8> = &m.mutate().unwrap(); 
-                    if m.is_enabled() == false { break; }
 
                     match file.write_all(new_str){
                         Err(why) => panic!("Could not do mutilates on file"),
@@ -166,7 +168,7 @@ pub fn gen_mutilator_list(inp :&String,
                                                                  seed:seed,
                                                                  output:out_chaos,
                                                                  tmp_vec:tmp_vec,
-                                                                 enabled:true};
+                                                                 max_count:0x0};
         chaos_flipper.init_output();
         mutilator_list.push(Box::new(chaos_flipper));
     }
@@ -178,7 +180,7 @@ pub fn gen_mutilator_list(inp :&String,
         let mut truncator = mutators::Truncator{input:inp_copy_trunc,
                                                 seed:seed,
                                                 output:out_trunc,
-                                                enabled:true};
+                                                max_count:0x0};
         truncator.init_output();
         mutilator_list.push(Box::new(truncator));
     }
@@ -191,11 +193,23 @@ pub fn gen_mutilator_list(inp :&String,
         let mut len_corruption = mutators::LenCorruption{input:inp_copy_lencor,
                                                          seed:seed,
                                                          output:out_lencor,
-                                                         enabled:true};
+                                                         max_count:0x0};
         len_corruption.init_output();
         mutilator_list.push(Box::new(len_corruption));
     }
 
+
+    if mutator_choice.find("inversion")  != None || mutator_choice == "all"{
+        let inp_copy_inv = String::from(&inp[0..strlen]);
+        let mut out_inv: Vec<u8> = Vec::with_capacity(inp.len());
+
+        let mut inversion = mutators::Inversion{input:inp_copy_inv,
+                                                     seed:seed,
+                                                     output:out_inv,
+                                                     max_count:0x0};
+        inversion.init_output();
+        mutilator_list.push(Box::new(inversion));
+    }
 
     return mutilator_list;
 }

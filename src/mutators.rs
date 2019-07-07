@@ -98,7 +98,7 @@ impl Mutilate for Truncator{
 
         self.output.clear();
         self.output.extend_from_slice(self.input[start_index..end_index].as_bytes());
-        //println!("output: {:?}", self.output);
+        println!("output: {:?}", self.output);
         self.seed+=1;
         return Some(self.output.to_vec());
 
@@ -225,3 +225,50 @@ impl Mutilate for Inversion{
 }
 
 ////////////////////////
+
+
+pub struct Tetris{
+    pub seed: usize,
+    pub input: String,
+    pub output: Vec<u8>,
+    pub max_count: usize,
+}
+
+impl Tetris{
+    pub fn set_seed(&mut self, seed:usize){  self.seed = seed; }
+}
+
+
+impl Mutilate for Tetris{
+    
+    fn mutate(&mut self) -> Option<Vec<u8>>{
+        println!("entered tetris");
+        self.output.clear();    
+        let strlen = self.input.len();
+        let blocksize = (self.seed / (strlen-1));
+        
+        let start_index = (self.seed % (strlen-1-blocksize)); 
+        println!("Seed {}, start_index {}, blocksize {}", self.seed, start_index, blocksize);
+
+        self.output.extend_from_slice(self.input[0..start_index].as_bytes()); // before the gap
+        self.output.extend_from_slice(self.input[start_index+blocksize..].as_bytes()); // after the gap
+                                                                            // what if start+block > len?
+        self.seed+=1;
+        return Some(self.output.to_vec())
+    }
+
+
+    fn init_output(&mut self){
+        println!("tetris init");
+        self.output = Vec::with_capacity(self.input.len());
+        self.output.extend_from_slice(self.input.as_bytes());
+        self.max_count = 0; 
+        for i in 2..self.input.len(){
+            println!("max_count : {}, += {}",self.max_count, i);
+            self.max_count += (self.input.len()-i); 
+        }
+    }
+        
+
+    fn max_count(&mut self) -> usize { self.max_count }
+}

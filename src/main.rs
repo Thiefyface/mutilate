@@ -211,6 +211,19 @@ pub fn gen_mutilator_list(inp :&String,
         mutilator_list.push(Box::new(inversion));
     }
 
+
+    if mutator_choice.find("tetris")  != None || mutator_choice == "all"{
+        let inp_copy_tetris = String::from(&inp[0..strlen]);
+        let mut out_tetris: Vec<u8> = Vec::with_capacity(inp.len());
+
+        let mut tetris = mutators::Tetris{input:inp_copy_tetris,
+                                          seed:seed,
+                                          output:out_tetris,
+                                          max_count:0x0};
+        tetris.init_output();
+        mutilator_list.push(Box::new(tetris));
+    }
+
     return mutilator_list;
 }
 
